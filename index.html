@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CRYPTO DATS · live mNAV</title>
+<style>
+  :root {
+    --bg: #0b0b0c;
+    --panel: #141416;
+    --row: #1a1a1d;
+    --line: #2a2a2e;
+    --text: #f2f2f3;
+    --muted: #8a8a93;
+    --green: #3dd68c;
+    --red: #ff5c6a;
+    --amber: #f5c14a;
+    --blue: #5b8cff;
+    --chip: #232329;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 22px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #0b0b0ce6; backdrop-filter: blur(10px); z-index: 5;
+  }
+  h1 { font-size: 15px; letter-spacing: .12em; font-weight: 600; margin: 0; color: #c9c9d1; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button, select {
+    background: var(--chip); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px; cursor: pointer;
+  }
+  button:hover { border-color: #4a4a52; }
+  .stamp { color: var(--muted); font-size: 12px; }
+  .ok { color: var(--green); }
+  .bad { color: var(--red); }
+  .warn { color: var(--amber); }
+  main { padding: 18px 22px 40px; max-width: 1280px; margin: 0 auto; }
+  .spots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .spot {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 10px; min-width: 108px;
+  }
+  .spot b { display: block; font-size: 13px; }
+  .spot span { color: var(--muted); font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th { text-align: left; font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: #1c1c20; }
+  .ticker { font-weight: 700; letter-spacing: .04em; }
+  .name { color: var(--muted); font-size: 12px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .mnav { font-weight: 700; font-size: 16px; }
+  .cheap { color: var(--green); }
+  .fair { color: var(--amber); }
+  .rich { color: var(--red); }
+  .pill { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--chip); color: var(--muted); margin-left: 6px; }
+  .caveat { color: var(--muted); font-size: 11px; max-width: 260px; }
+  details { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  textarea { width: 100%; min-height: 220px; background: #0f0f12; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .legend { color: var(--muted); font-size: 12px; margin: 12px 0 0; }
+  .err { background: #2a1216; color: #ffb4bc; border: 1px solid #5a2430; padding: 8px 10px; border-radius: 8px; margin-bottom: 12px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>▾ CRYPTO DATS · LIVE mNAV</h1>
+  <div class="controls">
+    <span class="stamp" id="stamp">loading…</span>
+    <select id="sort">
+      <option value="basic">sort: basic mNAV</option>
+      <option value="ev">sort: EV mNAV</option>
+      <option value="cap">sort: market cap</option>
+      <option value="ticker">sort: ticker</option>
+    </select>
+    <button id="refresh">Refresh now</button>
+    <button id="reset">Reset overrides</button>
+  </div>
+</header>
+<main>
+  <div class="err" id="err"></div>
+  <div class="spots" id="spots"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>DAT</th>
+        <th>Asset / stack</th>
+        <th>Stock</th>
+        <th>Crypto NAV</th>
+        <th>Mkt cap</th>
+        <th>Basic mNAV</th>
+        <th>EV mNAV</th>
+        <th>FD mNAV</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="legend">Basic = market cap / token NAV. EV = (market cap + debt − cash) / token NAV. FD = diluted shares × price / token NAV. MSTR Pref EV uses +preferred. Holdings lag filings. Not financial advice.</p>
+  <details>
+    <summary>Edit holdings.json (saved in this browser)</summary>
+    <p class="legend">Change token counts, shares, cash, debt after a new 8-K, then Save.</p>
+    <textarea id="editor"></textarea>
+    <div style="margin-top:8px"><button id="save">Save overrides</button></div>
+  </details>
+</main>
+<script>
+const FALLBACK = {
+  asOf: "2026-09-02",
+  tokens: {
+    BTC: { coingecko: "bitcoin" },
+    ETH: { coingecko: "ethereum" },
+    SOL: { coingecko: "solana" },
+    HYPE: { coingecko: "hyperliquid" },
+    AVAX: { coingecko: "avalanche-2" },
+    ENA: { coingecko: "ethena" },
+    ZEC: { coingecko: "zcash" },
+    CC: { coingecko: "canton-network" }
+  },
+  dats: [
+    { ticker:"AVAT", name:"Avalanche Treasury", asset:"AVAX", holdings:15310000, holdingsAsOf:"2026-06-30", shares:43720000, fdShares:43720000, cash:1760000, debt:23000000, fallbackPx:0.72, caveat:"~7.8M AVAX pledged; multi-year locks" },
+    { ticker:"MSTR", name:"Strategy", asset:"BTC", holdings:845050, holdingsAsOf:"2026-08-31", shares:388600000, fdShares:450100000, cash:2500000000, debt:6800000000, preferred:15000000000, fallbackPx:124.88, caveat:"Preferred stack ~$15B; basic vs EV are different products" },
+    { ticker:"BMNR", name:"Bitmine Immersion", asset:"ETH", holdings:5901112, extra:{BTC:211}, holdingsAsOf:"2026-08-30", shares:603230000, fdShares:603230000, cash:541000000, debt:0, fallbackPx:23.37, caveat:"Kitchen-sink crypto+cash+moonshots was $15.6B on Aug 30" },
+    { ticker:"PURR", name:"Hyperliquid Strategies", asset:"HYPE", holdings:29360000, holdingsAsOf:"2026-08-27", shares:197800000, fdShares:224000000, cash:133000000, debt:0, fallbackPx:11.36, caveat:"Advisor warrants ~224M FD" },
+    { ticker:"USDE", name:"StablecoinX", asset:"ENA", holdings:3029000000, holdingsAsOf:"2026-06-30", shares:24030000, fdShares:24030000, cash:18900000, debt:0, fallbackPx:8.36, caveat:"~20% of ENA supply; PIPE / S-1 resale overhang" },
+    { ticker:"CYPH", name:"Cypherpunk Technologies", asset:"ZEC", holdings:323394, holdingsAsOf:"2026-08-12", shares:107800000, fdShares:333340000, cash:7600000, debt:0, fallbackPx:1.71, caveat:"Winklevoss warrant; common vs FD mNAV diverge hard" },
+    { ticker:"FWDI", name:"Forward Industries", asset:"SOL", holdings:7810000, holdingsAsOf:"2026-08-03", shares:73850000, fdShares:103500000, cash:11000000, debt:105000000, fallbackPx:6.21, caveat:"$105M debt; cost basis ~$232/SOL" },
+    { ticker:"CNTN", name:"Canton Strategic", asset:"CC", holdings:3714204876, holdingsAsOf:"2026-06-30", shares:79680000, fdShares:79680000, cash:37200000, debt:0, dtl:107000000, fallbackPx:2.28, caveat:"Illiquid CC; $107M deferred tax liability" }
+  ]
+};
+
+const $ = (id) => document.getElementById(id);
+let cfg = JSON.parse(localStorage.getItem("dat-mnav-cfg") || "null") || FALLBACK;
+let tokenPx = {};
+let tokenChg = {};
+let stockPx = {};
+let stockChg = {};
+let staleStocks = false;
+
+function money(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return "$" + (n/1e9).toFixed(2) + "B";
+  if (abs >= 1e6) return "$" + (n/1e6).toFixed(1) + "M";
+  if (abs >= 1e3) return "$" + (n/1e3).toFixed(1) + "k";
+  return "$" + n.toFixed(n >= 10 ? 2 : 4);
+}
+function fmtPx(n) {
+  if (n == null) return "—";
+  if (n >= 100) return n.toFixed(2);
+  if (n >= 1) return n.toFixed(2);
+  if (n >= 0.1) return n.toFixed(4);
+  return n.toFixed(5);
+}
+function chgHtml(v) {
+  if (v == null || Number.isNaN(v)) return "";
+  const cls = v >= 0 ? "ok" : "bad";
+  return `<span class="${cls}">${v >= 0 ? "+" : ""}${v.toFixed(2)}%</span>`;
+}
+function mnavClass(x) {
+  if (x == null) return "";
+  if (x < 0.85) return "cheap";
+  if (x <= 1.05) return "fair";
+  return "rich";
+}
+function navFor(d) {
+  let n = (d.holdings || 0) * (tokenPx[d.asset] || 0);
+  if (d.extra) {
+    for (const [k,v] of Object.entries(d.extra)) n += v * (tokenPx[k] || 0);
+  }
+  return n;
+}
+
+async function fetchJson(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(res.status + " " + url);
+    return await res.json();
+  } finally { clearTimeout(t); }
+}
+
+async function loadTokens() {
+  const ids = [...new Set(Object.values(cfg.tokens).map(t => t.coingecko))].join(",");
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+  const data = await fetchJson(url);
+  for (const [sym, meta] of Object.entries(cfg.tokens)) {
+    const row = data[meta.coingecko];
+    if (row && row.usd) {
+      tokenPx[sym] = row.usd;
+      tokenChg[sym] = row.usd_24h_change;
+    }
+  }
+  if (!tokenPx.CC && data["cc"]) tokenPx.CC = data["cc"].usd;
+}
+
+async function loadStocks() {
+  const tickers = cfg.dats.map(d => d.ticker).join(",");
+  const yahoo = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers}`;
+  const proxies = [
+    yahoo,
+    "https://corsproxy.io/?" + encodeURIComponent(yahoo),
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(yahoo)
+  ];
+  let lastErr;
+  for (const url of proxies) {
+    try {
+      const data = await fetchJson(url);
+      const results = data?.quoteResponse?.result || [];
+      if (!results.length) throw new Error("empty yahoo");
+      for (const q of results) {
+        const px = q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice;
+        if (px) {
+          stockPx[q.symbol] = px;
+          stockChg[q.symbol] = q.regularMarketChangePercent;
+        }
+      }
+      staleStocks = false;
+      return;
+    } catch (e) { lastErr = e; }
+  }
+  staleStocks = true;
+  for (const d of cfg.dats) if (stockPx[d.ticker] == null) stockPx[d.ticker] = d.fallbackPx;
+  throw lastErr || new Error("stock quotes failed");
+}
+
+function render() {
+  const spots = $("spots");
+  spots.innerHTML = Object.keys(cfg.tokens).map(sym => `
+    <div class="spot">
+      <span>${sym}</span>
+      <b class="num">${fmtPx(tokenPx[sym])}</b>
+      <span>${chgHtml(tokenChg[sym])}</span>
+    </div>`).join("");
+
+  const rows = cfg.dats.map(d => {
+    const px = stockPx[d.ticker];
+    const nav = navFor(d);
+    const cap = (d.shares || 0) * (px || 0);
+    const ev = cap + (d.debt || 0) - (d.cash || 0);
+    const evPref = ev + (d.preferred || 0);
+    const basic = nav ? cap / nav : null;
+    const evM = nav ? ev / nav : null;
+    const fd = nav ? ((d.fdShares || d.shares) * px) / nav : null;
+    const pref = d.preferred && nav ? evPref / nav : null;
+    return { d, px, nav, cap, basic, evM, fd, pref };
+  });
+
+  const key = $("sort").value;
+  rows.sort((a,b) => {
+    if (key === "ticker") return a.d.ticker.localeCompare(b.d.ticker);
+    if (key === "cap") return (b.cap||0) - (a.cap||0);
+    if (key === "ev") return (a.evM||99) - (b.evM||99);
+    return (a.basic||99) - (b.basic||99);
+  });
+
+  $("rows").innerHTML = rows.map(({d,px,nav,cap,basic,evM,fd,pref}) => `
+    <tr>
+      <td>
+        <div class="ticker">${d.ticker}</div>
+        <div class="name">${d.name}</div>
+      </td>
+      <td>
+        <div>${d.asset} ${Number(d.holdings).toLocaleString()}${d.extra ? " + extra" : ""}</div>
+        <div class="name">as of ${d.holdingsAsOf}</div>
+      </td>
+      <td class="num">
+        ${fmtPx(px)} ${chgHtml(stockChg[d.ticker])}
+        ${staleStocks ? '<span class="pill">STALE</span>' : ""}
+      </td>
+      <td class="num">${money(nav)}</td>
+      <td class="num">${money(cap)}</td>
+      <td class="num mnav ${mnavClass(basic)}">${basic ? basic.toFixed(2)+"x" : "—"}</td>
+      <td class="num mnav ${mnavClass(evM)}">${evM ? evM.toFixed(2)+"x" : "—"}${pref ? `<div class="name">pref ${pref.toFixed(2)}x</div>` : ""}</td>
+      <td class="num">${fd ? fd.toFixed(2)+"x" : "—"}</td>
+      <td class="caveat">${d.caveat || ""}</td>
+    </tr>`).join("");
+}
+
+async function refresh() {
+  $("stamp").textContent = "updating…";
+  $("err").style.display = "none";
+  const problems = [];
+  try { await loadTokens(); } catch (e) { problems.push("tokens: " + e.message); }
+  try { await loadStocks(); } catch (e) { problems.push("stocks falling back to last close: " + e.message); }
+  render();
+  const now = new Date();
+  $("stamp").innerHTML = (staleStocks ? '<span class="warn">quotes stale · </span>' : '<span class="ok">live · </span>') +
+    now.toLocaleString();
+  if (problems.length) {
+    $("err").style.display = "block";
+    $("err").textContent = problems.join(" | ");
+  }
+}
+
+$("refresh").onclick = refresh;
+$("sort").onchange = render;
+$("editor").value = JSON.stringify(cfg, null, 2);
+$("save").onclick = () => {
+  try {
+    cfg = JSON.parse($("editor").value);
+    localStorage.setItem("dat-mnav-cfg", JSON.stringify(cfg));
+    refresh();
+  } catch (e) { alert("Invalid JSON: " + e.message); }
+};
+$("reset").onclick = () => {
+  localStorage.removeItem("dat-mnav-cfg");
+  cfg = FALLBACK;
+  $("editor").value = JSON.stringify(cfg, null, 2);
+  refresh();
+};
+
+refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>
