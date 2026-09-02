@@ -1,0 +1,123 @@
+{
+  "asOf": "2026-09-02",
+  "note": "Last disclosed token stacks. Update after 8-K / IR.",
+  "tokens": {
+    "BTC": { "coingecko": "bitcoin" },
+    "ETH": { "coingecko": "ethereum" },
+    "SOL": { "coingecko": "solana" },
+    "HYPE": { "coingecko": "hyperliquid" },
+    "AVAX": { "coingecko": "avalanche-2" },
+    "ENA": { "coingecko": "ethena" },
+    "ZEC": { "coingecko": "zcash" },
+    "CC": { "coingecko": "canton-network" }
+  },
+  "dats": [
+    {
+      "ticker": "AVAT",
+      "name": "Avalanche Treasury",
+      "asset": "AVAX",
+      "holdings": 15310000,
+      "holdingsAsOf": "2026-06-30",
+      "shares": 43720000,
+      "fdShares": 43720000,
+      "cash": 1760000,
+      "debt": 23000000,
+      "fallbackPx": 0.72,
+      "caveat": "~7.8M AVAX pledged; multi-year locks"
+    },
+    {
+      "ticker": "MSTR",
+      "name": "Strategy",
+      "asset": "BTC",
+      "holdings": 845050,
+      "holdingsAsOf": "2026-08-31",
+      "shares": 388600000,
+      "fdShares": 450100000,
+      "cash": 2500000000,
+      "debt": 6800000000,
+      "preferred": 15000000000,
+      "fallbackPx": 124.88,
+      "caveat": "Preferred stack ~$15B; basic vs EV are different products"
+    },
+    {
+      "ticker": "BMNR",
+      "name": "Bitmine Immersion",
+      "asset": "ETH",
+      "holdings": 5901112,
+      "extra": { "BTC": 211 },
+      "holdingsAsOf": "2026-08-30",
+      "shares": 603230000,
+      "fdShares": 603230000,
+      "cash": 541000000,
+      "debt": 0,
+      "fallbackPx": 23.37,
+      "caveat": "Kitchen-sink crypto+cash+moonshots was $15.6B on Aug 30"
+    },
+    {
+      "ticker": "PURR",
+      "name": "Hyperliquid Strategies",
+      "asset": "HYPE",
+      "holdings": 29360000,
+      "holdingsAsOf": "2026-08-27",
+      "shares": 197800000,
+      "fdShares": 224000000,
+      "cash": 133000000,
+      "debt": 0,
+      "fallbackPx": 11.36,
+      "caveat": "Advisor warrants ~224M FD"
+    },
+    {
+      "ticker": "USDE",
+      "name": "StablecoinX",
+      "asset": "ENA",
+      "holdings": 3029000000,
+      "holdingsAsOf": "2026-06-30",
+      "shares": 24030000,
+      "fdShares": 24030000,
+      "cash": 18900000,
+      "debt": 0,
+      "fallbackPx": 8.36,
+      "caveat": "~20% of ENA supply; PIPE / S-1 resale overhang"
+    },
+    {
+      "ticker": "CYPH",
+      "name": "Cypherpunk Technologies",
+      "asset": "ZEC",
+      "holdings": 323394,
+      "holdingsAsOf": "2026-08-12",
+      "shares": 107800000,
+      "fdShares": 333340000,
+      "cash": 7600000,
+      "debt": 0,
+      "fallbackPx": 1.71,
+      "caveat": "Winklevoss warrant; common vs FD mNAV diverge hard"
+    },
+    {
+      "ticker": "FWDI",
+      "name": "Forward Industries",
+      "asset": "SOL",
+      "holdings": 7810000,
+      "holdingsAsOf": "2026-08-03",
+      "shares": 73850000,
+      "fdShares": 103500000,
+      "cash": 11000000,
+      "debt": 105000000,
+      "fallbackPx": 6.21,
+      "caveat": "$105M debt; cost basis ~$232/SOL"
+    },
+    {
+      "ticker": "CNTN",
+      "name": "Canton Strategic",
+      "asset": "CC",
+      "holdings": 3714204876,
+      "holdingsAsOf": "2026-06-30",
+      "shares": 79680000,
+      "fdShares": 79680000,
+      "cash": 37200000,
+      "debt": 0,
+      "dtl": 107000000,
+      "fallbackPx": 2.28,
+      "caveat": "Illiquid CC; $107M deferred tax liability"
+    }
+  ]
+}
